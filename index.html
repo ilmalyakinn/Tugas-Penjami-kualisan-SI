@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dasbor Analisis Kualitas Aplikasi | Duolingo vs. Tokopedia</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <!-- Chosen Palette: Calm Harmony -->
+    <!-- Application Structure Plan: Aplikasi ini dirancang sebagai dasbor interaktif dengan tiga bagian utama yang dapat dinavigasi: 'Perbandingan Kualitas', 'Uji Skenario', dan 'Uji Black Box'. Struktur ini dipilih untuk memandu pengguna dari ringkasan visual tingkat tinggi (grafik radar) ke analisis perbandingan yang mendalam (teks dinamis per faktor), dan akhirnya ke bukti pengujian terperinci (skenario & tabel black box). Alur ini mengubah laporan linear menjadi pengalaman eksplorasi, memungkinkan pengguna untuk membandingkan dan memahami data dengan cara yang lebih efektif dan menarik. Navigasi berbasis tab memastikan antarmuka tetap bersih dan fokus pada satu jenis informasi pada satu waktu, meningkatkan kegunaan. -->
+    <!-- Visualization & Content Choices: 
+    1. Perbandingan Skor Kualitas: Report Info -> Skor kualitas ISO 9126 untuk 5 faktor. Goal -> Membandingkan profil kualitas kedua aplikasi secara sekilas. Viz/Presentation -> Radar Chart. Interaction -> Tampilan visual langsung. Justification -> Radar chart sangat efektif untuk membandingkan beberapa entitas pada beberapa variabel yang sama, memberikan 'sidik jari' kualitas visual yang instan. Library -> Chart.js (Canvas).
+    2. Analisis Kualitatif per Faktor: Report Info -> Teks deskriptif analisis untuk setiap faktor. Goal -> Memberikan detail di balik skor. Viz/Presentation -> Blok teks dinamis berdampingan. Interaction -> Klik pada tombol faktor (mis. 'Fungsionalitas') untuk memuat teks yang relevan. Justification -> Memungkinkan pengguna untuk melakukan 'drill-down' dari ringkasan visual ke analisis mendalam, membuat hubungan antara data kuantitatif dan kualitatif menjadi jelas. Library/Method -> Vanilla JS DOM Manipulation.
+    3. Skenario Uji & Uji Black Box: Report Info -> Skenario uji dan tabel hasil pengujian. Goal -> Menyajikan bukti pengujian secara terorganisir. Viz/Presentation -> Kartu info dan tabel HTML. Interaction -> Tombol 'toggle' untuk beralih antara tabel data Duolingo dan Tokopedia. Justification -> Menyajikan data terstruktur dengan cara yang paling sesuai (tabel), sementara interaksi 'toggle' menjaga antarmuka tetap rapi dan memungkinkan pengguna fokus pada satu set data pada satu waktu. Library/Method -> Vanilla JS.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+      body {
+        font-family: "Inter", sans-serif;
+        background-color: #f8fafc; /* slate-50 */
+      }
+      .active-nav {
+        background-color: #4f46e5; /* indigo-600 */
+        color: white;
+      }
+      .inactive-nav {
+        background-color: #eef2ff; /* indigo-100 */
+        color: #4338ca; /* indigo-800 */
+      }
+      .active-factor {
+        background-color: #10b981; /* emerald-500 */
+        color: white;
+        box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1),
+          0 2px 4px -2px rgb(0 0 0 / 0.1);
+      }
+      .inactive-factor {
+        background-color: white;
+        color: #374151; /* gray-700 */
+      }
+      .chart-container {
+        position: relative;
+        width: 100%;
+        max-width: 600px;
+        margin-left: auto;
+        margin-right: auto;
+        height: 350px;
+        max-height: 400px;
+      }
+      @media (min-width: 768px) {
+        .chart-container {
+          height: 450px;
+          max-height: 500px;
+        }
+      }
+    </style>
+  </head>
+  <body class="text-gray-800">
+    <div class="min-h-screen container mx-auto px-4 py-8">
+      <header class="text-center mb-8">
+        <h1 class="text-4xl font-bold text-indigo-800">
+          Analisis Kualitas Perangkat Lunak
+        </h1>
+        <p class="text-xl mt-2 text-gray-600">
+          Studi Kasus Perbandingan: Duolingo vs. Tokopedia
+        </p>
+      </header>
+
+      <nav
+        class="flex justify-center space-x-2 sm:space-x-4 mb-10 p-2 bg-indigo-50 rounded-full shadow-sm"
+      >
+        <button
+          id="nav-comparison"
+          class="nav-button active-nav px-4 py-2 rounded-full font-semibold transition-colors duration-300"
+        >
+          Perbandingan Kualitas
+        </button>
+        <button
+          id="nav-scenarios"
+          class="nav-button inactive-nav px-4 py-2 rounded-full font-semibold transition-colors duration-300"
+        >
+          Uji Skenario
+        </button>
+        <button
+          id="nav-blackbox"
+          class="nav-button inactive-nav px-4 py-2 rounded-full font-semibold transition-colors duration-300"
+        >
+          Uji Black Box
+        </button>
+      </nav>
+
+      <main>
+        <section id="comparison" class="content-section">
+          <div class="bg-white p-6 rounded-2xl shadow-lg">
+            <h2 class="text-2xl font-bold text-center mb-2 text-indigo-700">
+              Perbandingan Kualitas ISO 9126
+            </h2>
+            <p class="text-center text-gray-600 mb-6 max-w-3xl mx-auto">
+              Bagian ini menyajikan perbandingan langsung antara Duolingo dan
+              Tokopedia berdasarkan lima faktor kualitas dari standar ISO 9126.
+              Grafik radar di bawah memberikan ringkasan visual performa kedua
+              aplikasi, sementara tombol di bawahnya memungkinkan Anda untuk
+              menjelajahi analisis mendalam untuk setiap faktor kualitas.
+            </p>
+            <div class="chart-container">
+              <canvas id="qualityChart"></canvas>
+            </div>
+          </div>
+
+          <div class="mt-8">
+            <div class="flex flex-wrap justify-center gap-3 mb-6">
+              <button
+                class="factor-button active-factor px-4 py-2 rounded-lg font-medium transition-all duration-200"
+                data-factor="functionality"
+              >
+                Fungsionalitas
+              </button>
+              <button
+                class="factor-button inactive-factor px-4 py-2 rounded-lg font-medium transition-all duration-200"
+                data-factor="reliability"
+              >
+                Keandalan
+              </button>
+              <button
+                class="factor-button inactive-factor px-4 py-2 rounded-lg font-medium transition-all duration-200"
+                data-factor="usability"
+              >
+                Kemudahan Penggunaan
+              </button>
+              <button
+                class="factor-button inactive-factor px-4 py-2 rounded-lg font-medium transition-all duration-200"
+                data-factor="efficiency"
+              >
+                Efisiensi
+              </button>
+              <button
+                class="factor-button inactive-factor px-4 py-2 rounded-lg font-medium transition-all duration-200"
+                data-factor="portability"
+              >
+                Portabilitas
+              </button>
+            </div>
+
+            <div id="analysis-content" class="grid md:grid-cols-2 gap-6">
+              <!-- Konten dinamis akan dimuat di sini -->
+            </div>
+          </div>
+        </section>
+
+        <section id="scenarios" class="content-section hidden">
+          <div class="bg-white p-6 rounded-2xl shadow-lg">
+            <h2 class="text-2xl font-bold text-center mb-2 text-indigo-700">
+              Pengujian Berbasis Skenario
+            </h2>
+            <p class="text-center text-gray-600 mb-6 max-w-3xl mx-auto">
+              Di sini kami menyajikan skenario pengujian spesifik untuk meniru
+              alur kerja pengguna yang umum di kedua aplikasi. Setiap kartu
+              menunjukkan skenario, hasil yang diharapkan, dan kesimpulan dari
+              pengamatan kami untuk menilai apakah fungsionalitas inti berjalan
+              sesuai tujuan.
+            </p>
+            <div class="grid md:grid-cols-2 gap-8">
+              <div class="bg-slate-50 p-6 rounded-xl border border-slate-200">
+                <h3 class="text-xl font-bold mb-4 text-green-600">Duolingo</h3>
+                <div class="space-y-4">
+                  <div>
+                    <h4 class="font-semibold text-gray-700">Skenario:</h4>
+                    <p class="text-gray-600">
+                      Menyelesaikan satu unit pelajaran dasar bahasa Spanyol
+                      dari awal hingga akhir.
+                    </p>
+                  </div>
+                  <div>
+                    <h4 class="font-semibold text-gray-700">
+                      Hasil yang Diharapkan:
+                    </h4>
+                    <p class="text-gray-600">
+                      Pengguna dapat menyelesaikan unit tanpa hambatan, dan
+                      sistem memberikan poin pengalaman (XP) serta lencana
+                      sebagai penghargaan.
+                    </p>
+                  </div>
+                  <div>
+                    <h4 class="font-semibold text-gray-700">
+                      Kesimpulan Pengamatan:
+                    </h4>
+                    <p class="text-gray-600 font-medium text-green-700">
+                      Berhasil 100%. Fitur utama pembelajaran dan sistem
+                      gamifikasi (penghargaan) berfungsi dengan sempurna.
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div class="bg-slate-50 p-6 rounded-xl border border-slate-200">
+                <h3 class="text-xl font-bold mb-4 text-blue-600">Tokopedia</h3>
+                <div class="space-y-4">
+                  <div>
+                    <h4 class="font-semibold text-gray-700">Skenario:</h4>
+                    <p class="text-gray-600">
+                      Melakukan pembelian satu barang, mulai dari menambahkannya
+                      ke keranjang belanja hingga proses pembayaran berhasil.
+                    </p>
+                  </div>
+                  <div>
+                    <h4 class="font-semibold text-gray-700">
+                      Hasil yang Diharapkan:
+                    </h4>
+                    <p class="text-gray-600">
+                      Barang berhasil dibeli, stok berkurang, dan notifikasi
+                      pembayaran sukses diterima oleh pengguna.
+                    </p>
+                  </div>
+                  <div>
+                    <h4 class="font-semibold text-gray-700">
+                      Kesimpulan Pengamatan:
+                    </h4>
+                    <p class="text-gray-600 font-medium text-green-700">
+                      Berhasil 100%. Alur transaksi dari pemilihan produk hingga
+                      pembayaran berjalan lancar tanpa bug yang ditemukan.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section id="blackbox" class="content-section hidden">
+          <div class="bg-white p-6 rounded-2xl shadow-lg">
+            <h2 class="text-2xl font-bold text-center mb-2 text-indigo-700">
+              Pengujian Black Box
+            </h2>
+            <p class="text-center text-gray-600 mb-6 max-w-3xl mx-auto">
+              Bagian ini menampilkan hasil pengujian black box, di mana kami
+              menguji fungsionalitas aplikasi tanpa melihat kode internalnya.
+              Gunakan tombol di bawah untuk beralih antara hasil pengujian
+              Duolingo dan Tokopedia. Tabel menunjukkan input yang diberikan,
+              hasil yang diharapkan, dan output aktual dari sistem.
+            </p>
+            <div class="flex justify-center space-x-4 mb-6">
+              <button
+                id="toggle-duolingo"
+                class="bb-toggle active-nav text-white px-6 py-2 rounded-lg font-semibold"
+              >
+                Duolingo
+              </button>
+              <button
+                id="toggle-tokopedia"
+                class="bb-toggle inactive-nav text-indigo-800 px-6 py-2 rounded-lg font-semibold"
+              >
+                Tokopedia
+              </button>
+            </div>
+
+            <div id="duolingo-table" class="bb-content overflow-x-auto">
+              <table class="w-full min-w-max text-sm text-left text-gray-500">
+                <thead class="text-xs text-gray-700 uppercase bg-gray-100">
+                  <tr>
+                    <th scope="col" class="px-6 py-3">Data Uji</th>
+                    <th scope="col" class="px-6 py-3">Input</th>
+                    <th scope="col" class="px-6 py-3">Hasil Diharapkan</th>
+                    <th scope="col" class="px-6 py-3">Output Testing</th>
+                    <th scope="col" class="px-6 py-3">Kesimpulan</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr class="bg-white border-b">
+                    <td class="px-6 py-4">Login dengan email valid</td>
+                    <td class="px-6 py-4">Email & Password benar</td>
+                    <td class="px-6 py-4">Berhasil masuk ke akun</td>
+                    <td class="px-6 py-4">Masuk ke halaman utama</td>
+                    <td class="px-6 py-4 text-green-600 font-medium">
+                      Berhasil
+                    </td>
+                  </tr>
+                  <tr class="bg-gray-50 border-b">
+                    <td class="px-6 py-4">Login dengan password salah</td>
+                    <td class="px-6 py-4">Email benar, Password salah</td>
+                    <td class="px-6 py-4">Gagal masuk, pesan error</td>
+                    <td class="px-6 py-4">Muncul notifikasi error</td>
+                    <td class="px-6 py-4 text-green-600 font-medium">
+                      Berhasil
+                    </td>
+                  </tr>
+                  <tr class="bg-white border-b">
+                    <td class="px-6 py-4">Menjawab soal dengan benar</td>
+                    <td class="px-6 py-4">Memilih jawaban yang benar</td>
+                    <td class="px-6 py-4">Notifikasi 'Benar' muncul</td>
+                    <td class="px-6 py-4">Notifikasi 'Benar' muncul</td>
+                    <td class="px-6 py-4 text-green-600 font-medium">
+                      Berhasil
+                    </td>
+                  </tr>
+                  <tr class="bg-gray-50 border-b">
+                    <td class="px-6 py-4">Menjawab soal dengan salah</td>
+                    <td class="px-6 py-4">Memilih jawaban yang salah</td>
+                    <td class="px-6 py-4">Notifikasi 'Salah' & koreksi</td>
+                    <td class="px-6 py-4">Notifikasi & koreksi muncul</td>
+                    <td class="px-6 py-4 text-green-600 font-medium">
+                      Berhasil
+                    </td>
+                  </tr>
+                  <tr class="bg-white border-b">
+                    <td class="px-6 py-4">Menyelesaikan pelajaran harian</td>
+                    <td class="px-6 py-4">Menyelesaikan 1 sesi belajar</td>
+                    <td class="px-6 py-4">Streak (rentetan) bertambah</td>
+                    <td class="px-6 py-4">Indikator streak bertambah 1</td>
+                    <td class="px-6 py-4 text-green-600 font-medium">
+                      Berhasil
+                    </td>
+                  </tr>
+                  <tr class="bg-gray-50">
+                    <td class="px-6 py-4">Keluar dari akun</td>
+                    <td class="px-6 py-4">Klik tombol 'Logout'</td>
+                    <td class="px-6 py-4">Kembali ke halaman login</td>
+                    <td class="px-6 py-4">Kembali ke halaman login</td>
+                    <td class="px-6 py-4 text-green-600 font-medium">
+                      Berhasil
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div id="tokopedia-table" class="bb-content hidden overflow-x-auto">
+              <table class="w-full min-w-max text-sm text-left text-gray-500">
+                <thead class="text-xs text-gray-700 uppercase bg-gray-100">
+                  <tr>
+                    <th scope="col" class="px-6 py-3">Data Uji</th>
+                    <th scope="col" class="px-6 py-3">Input</th>
+                    <th scope="col" class="px-6 py-3">Hasil Diharapkan</th>
+                    <th scope="col" class="px-6 py-3">Output Testing</th>
+                    <th scope="col" class="px-6 py-3">Kesimpulan</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr class="bg-white border-b">
+                    <td class="px-6 py-4">Pencarian produk valid</td>
+                    <td class="px-6 py-4">Ketik 'laptop' di search bar</td>
+                    <td class="px-6 py-4">Menampilkan daftar laptop</td>
+                    <td class="px-6 py-4">Daftar produk laptop muncul</td>
+                    <td class="px-6 py-4 text-green-600 font-medium">
+                      Berhasil
+                    </td>
+                  </tr>
+                  <tr class="bg-gray-50 border-b">
+                    <td class="px-6 py-4">Pencarian produk tidak valid</td>
+                    <td class="px-6 py-4">Ketik 'asdfghjkl'</td>
+                    <td class="px-6 py-4">
+                      Menampilkan 'Produk tidak ditemukan'
+                    </td>
+                    <td class="px-6 py-4">Halaman 'tidak ditemukan' muncul</td>
+                    <td class="px-6 py-4 text-green-600 font-medium">
+                      Berhasil
+                    </td>
+                  </tr>
+                  <tr class="bg-white border-b">
+                    <td class="px-6 py-4">Menambah produk ke keranjang</td>
+                    <td class="px-6 py-4">Klik tombol '+ Keranjang'</td>
+                    <td class="px-6 py-4">Produk masuk ke keranjang</td>
+                    <td class="px-6 py-4">
+                      Ikon keranjang menunjukkan item baru
+                    </td>
+                    <td class="px-6 py-4 text-green-600 font-medium">
+                      Berhasil
+                    </td>
+                  </tr>
+                  <tr class="bg-gray-50 border-b">
+                    <td class="px-6 py-4">Proses checkout</td>
+                    <td class="px-6 py-4">Klik 'Beli' dari keranjang</td>
+                    <td class="px-6 py-4">Masuk ke halaman pembayaran</td>
+                    <td class="px-6 py-4">Pindah ke halaman pembayaran</td>
+                    <td class="px-6 py-4 text-green-600 font-medium">
+                      Berhasil
+                    </td>
+                  </tr>
+                  <tr class="bg-white border-b">
+                    <td class="px-6 py-4">Pembayaran gagal</td>
+                    <td class="px-6 py-4">Memilih metode & tidak bayar</td>
+                    <td class="px-6 py-4">Status pesanan 'Dibatalkan'</td>
+                    <td class="px-6 py-4">
+                      Pesanan otomatis batal setelah waktu habis
+                    </td>
+                    <td class="px-6 py-4 text-green-600 font-medium">
+                      Berhasil
+                    </td>
+                  </tr>
+                  <tr class="bg-gray-50">
+                    <td class="px-6 py-4">Filter produk</td>
+                    <td class="px-6 py-4">Pilih filter 'Harga Terendah'</td>
+                    <td class="px-6 py-4">Produk diurutkan dari termurah</td>
+                    <td class="px-6 py-4">Urutan produk berubah</td>
+                    <td class="px-6 py-4 text-green-600 font-medium">
+                      Berhasil
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const chartData = {
+          labels: [
+            "Fungsionalitas",
+            "Keandalan",
+            "Kemudahan Penggunaan",
+            "Efisiensi",
+            "Portabilitas",
+          ],
+          datasets: [
+            {
+              label: "Duolingo",
+              data: [9.5, 9, 9.5, 8.5, 9],
+              backgroundColor: "rgba(29, 185, 84, 0.2)",
+              borderColor: "rgba(29, 185, 84, 1)",
+              borderWidth: 2,
+              pointBackgroundColor: "rgba(29, 185, 84, 1)",
+              pointBorderColor: "#fff",
+              pointHoverBackgroundColor: "#fff",
+              pointHoverBorderColor: "rgba(29, 185, 84, 1)",
+            },
+            {
+              label: "Tokopedia",
+              data: [9, 8, 8.5, 8.5, 9.5],
+              backgroundColor: "rgba(79, 70, 229, 0.2)",
+              borderColor: "rgba(79, 70, 229, 1)",
+              borderWidth: 2,
+              pointBackgroundColor: "rgba(79, 70, 229, 1)",
+              pointBorderColor: "#fff",
+              pointHoverBackgroundColor: "#fff",
+              pointHoverBorderColor: "rgba(79, 70, 229, 1)",
+            },
+          ],
+        };
+
+        const analysisTextData = {
+          functionality: {
+            duolingo: {
+              title: "Duolingo",
+              icon: "✅",
+              text: "Fitur inti seperti pelajaran, latihan, dan tes berfungsi dengan sangat baik. Sistem gamifikasi (XP, lencana, liga) terintegrasi secara mulus dan mendorong keterlibatan pengguna.",
+            },
+            tokopedia: {
+              title: "Tokopedia",
+              icon: "✅",
+              text: "Fungsi utama seperti pencarian produk, penambahan ke keranjang, checkout, dan pembayaran berjalan lancar. Fitur tambahan seperti feed dan ulasan produk juga berfungsi sesuai harapan.",
+            },
+          },
+          reliability: {
+            duolingo: {
+              title: "Duolingo",
+              icon: "👍",
+              text: "Aplikasi sangat stabil dan jarang mengalami crash atau error. Kemajuan pengguna disimpan secara konsisten di cloud, memastikan tidak ada data yang hilang.",
+            },
+            tokopedia: {
+              title: "Tokopedia",
+              icon: "👌",
+              text: "Secara umum andal, namun terkadang mengalami kelambatan atau error saat ada lonjakan trafik (misalnya saat flash sale). Sistem pemulihan dari error sudah cukup baik.",
+            },
+          },
+          usability: {
+            duolingo: {
+              title: "Duolingo",
+              icon: "💡",
+              text: "Antarmuka sangat intuitif, bersih, dan mudah dipelajari bahkan oleh pengguna baru. Proses onboarding memandu pengguna dengan sangat baik. Desain visual menarik dan konsisten.",
+            },
+            tokopedia: {
+              title: "Tokopedia",
+              icon: "💡",
+              text: "Navigasi mudah dipahami dengan kategori yang jelas. Fitur pencarian canggih dengan filter yang membantu pengguna menemukan produk dengan cepat. Alur pembelian disederhanakan.",
+            },
+          },
+          efficiency: {
+            duolingo: {
+              title: "Duolingo",
+              icon: "⚡️",
+              text: "Waktu muat antar pelajaran dan layar sangat cepat. Penggunaan sumber daya (memori dan baterai) pada perangkat seluler relatif rendah, membuatnya efisien untuk sesi belajar singkat.",
+            },
+            tokopedia: {
+              title: "Tokopedia",
+              icon: "⚡️",
+              text: "Waktu muat halaman produk dan gambar cukup cepat. Namun, aplikasi bisa terasa berat jika membuka banyak halaman atau saat koneksi internet kurang stabil.",
+            },
+          },
+          portability: {
+            duolingo: {
+              title: "Duolingo",
+              icon: "📱💻",
+              text: "Tersedia dan berfungsi konsisten di berbagai platform, termasuk iOS, Android, dan web. Pengalaman pengguna hampir identik di semua perangkat, memungkinkan kelancaran transisi.",
+            },
+            tokopedia: {
+              title: "Tokopedia",
+              icon: "📱💻",
+              text: "Aplikasi mobile (iOS & Android) dan situs web desktop/mobile menawarkan fungsionalitas yang setara. Desain responsif memastikan tampilan yang baik di berbagai ukuran layar.",
+            },
+          },
+        };
+
+        const ctx = document.getElementById("qualityChart").getContext("2d");
+        const qualityChart = new Chart(ctx, {
+          type: "radar",
+          data: chartData,
+          options: {
+            maintainAspectRatio: false,
+            scales: {
+              r: {
+                angleLines: { color: "rgba(0, 0, 0, 0.1)" },
+                grid: { color: "rgba(0, 0, 0, 0.1)" },
+                pointLabels: {
+                  font: { size: 12, weight: "500" },
+                  color: "#4b5563",
+                },
+                ticks: {
+                  backdropColor: "rgba(255, 255, 255, 0.75)",
+                  color: "#6b7280",
+                  stepSize: 2,
+                },
+                suggestedMin: 0,
+                suggestedMax: 10,
+              },
+            },
+            plugins: {
+              legend: {
+                position: "top",
+                labels: {
+                  font: {
+                    size: 14,
+                    weight: "600",
+                  },
+                },
+              },
+            },
+          },
+        });
+
+        const analysisContent = document.getElementById("analysis-content");
+        const factorButtons = document.querySelectorAll(".factor-button");
+
+        function updateAnalysisContent(factor) {
+          const data = analysisTextData[factor];
+          analysisContent.innerHTML = `
+                    <div class="bg-slate-50 p-6 rounded-xl border border-slate-200 transition-opacity duration-500">
+                        <h3 class="text-xl font-bold mb-3 text-green-600">${data.duolingo.icon} ${data.duolingo.title}</h3>
+                        <p class="text-gray-600">${data.duolingo.text}</p>
+                    </div>
+                    <div class="bg-slate-50 p-6 rounded-xl border border-slate-200 transition-opacity duration-500">
+                        <h3 class="text-xl font-bold mb-3 text-blue-600">${data.tokopedia.icon} ${data.tokopedia.title}</h3>
+                        <p class="text-gray-600">${data.tokopedia.text}</p>
+                    </div>
+                `;
+        }
+
+        factorButtons.forEach((button) => {
+          button.addEventListener("click", () => {
+            factorButtons.forEach((btn) => {
+              btn.classList.remove("active-factor");
+              btn.classList.add("inactive-factor");
+            });
+            button.classList.add("active-factor");
+            button.classList.remove("inactive-factor");
+            updateAnalysisContent(button.dataset.factor);
+          });
+        });
+
+        updateAnalysisContent("functionality");
+
+        const navButtons = document.querySelectorAll(".nav-button");
+        const contentSections = document.querySelectorAll(".content-section");
+
+        navButtons.forEach((button) => {
+          button.addEventListener("click", () => {
+            navButtons.forEach((btn) => {
+              btn.classList.remove("active-nav");
+              btn.classList.add("inactive-nav");
+            });
+            button.classList.add("active-nav");
+            button.classList.remove("inactive-nav");
+
+            const targetId = button.id.split("-")[1];
+            contentSections.forEach((section) => {
+              if (section.id === targetId) {
+                section.classList.remove("hidden");
+              } else {
+                section.classList.add("hidden");
+              }
+            });
+          });
+        });
+
+        const bbToggles = document.querySelectorAll(".bb-toggle");
+        const bbContents = document.querySelectorAll(".bb-content");
+
+        bbToggles.forEach((button) => {
+          button.addEventListener("click", () => {
+            bbToggles.forEach((btn) => {
+              btn.classList.remove("active-nav");
+              btn.classList.add("inactive-nav");
+            });
+            button.classList.add("active-nav");
+            button.classList.remove("inactive-nav");
+
+            const targetId = button.id.split("-")[1];
+            bbContents.forEach((content) => {
+              if (content.id.includes(targetId)) {
+                content.classList.remove("hidden");
+              } else {
+                content.classList.add("hidden");
+              }
+            });
+          });
+        });
+      });
+    </script>
+  </body>
+</html>
