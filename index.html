@@ -496,8 +496,9 @@
                 
                 const systemPrompt = "Bertindak sebagai seorang analis data yang profesional. Ringkaslah teks di bawah ini ke dalam satu paragraf yang singkat dan mudah dipahami, dengan fokus pada poin-poin perbandingan utama.";
                 const userQuery = textToSummarize;
-                const apiKey = "";
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+                // Ganti YOUR_GEMINI_API_KEY_HERE dengan kunci API Anda yang sebenarnya
+                const apiKey = "AIzaSyB57Z4_3HuaHjwh5VzxEYXinOIqCQOsAVw"; 
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`;
 
                 try {
                     const response = await fetch(apiUrl, {
