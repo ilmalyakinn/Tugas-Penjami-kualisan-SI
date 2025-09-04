@@ -1,2 +1,4 @@
 # Tugas-Penjami-kualisan-SI
 “ANALISIS KUALITAS PERANGKAT LUNAK PADA APLIKASI DUOLINGO DAN TOKOPEDIA MENGGUNAKAN MODEL ISO/IEC 9126
+
+https://tugas-penjami-kualisan-si.vercel.app/
